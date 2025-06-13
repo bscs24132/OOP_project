@@ -7,11 +7,11 @@
 #include <fstream>
 using namespace std;
 void User::a_request(User* u) {
-    User** new_requests = new User*[n_r + 1];
-    for (int i = 0; i < n_r; ++i) new_requests[i] = requests[i];
-    new_requests[n_r] = u;
+    User** temp = new User*[n_r + 1];
+    for (int i = 0; i < n_r; ++i) temp[i] = requests[i];
+    temp[n_r] = u;
     delete[] requests;
-    requests = new_requests;
+    requests = temp;
     ++n_r;
 }
 void User::r_request(User* u) {
@@ -19,12 +19,12 @@ void User::r_request(User* u) {
     for (int i = 0; i < n_r; ++i)
         if (requests[i] == u) idx = i;
     if (idx == -1) return;
-    User** new_requests = new User*[n_r - 1];
+    User** nr = new User*[n_r - 1];
     int k = 0;
     for (int i = 0; i < n_r; ++i)
-        if (i != idx) new_requests[k++] = requests[i];
+        if (i != idx) nr[k++] = requests[i];
     delete[] requests;
-    requests = new_requests;
+    requests = nr;
     --n_r;
 }
 int User::get_requestcount() const {
@@ -36,12 +36,12 @@ User* User::get_requestuser(int idx) const {
     return NULL;
 }
 void User::a_sentrequest(User* u) {
-    User** new_sent = new User*[n_s_r + 1];
+    User** n = new User*[n_s_r + 1];
     for (int i = 0; i < n_s_r; ++i)
-	new_sent[i] = sentRequests[i];
-    new_sent[n_s_r] = u;
+	n[i] = sentRequests[i];
+    n[n_s_r] = u;
     delete[] sentRequests;
-    sentRequests = new_sent;
+    sentRequests = n;
     ++n_s_r;
 }
 void User::r_sentrequest(User* u) {
@@ -110,31 +110,31 @@ String User::getpass() const
 return pass; 
 }
 void User::a_followed(Follow* f) {
-    Follow** new_follows = new Follow*[n_follows + 1];
+    Follow** nfs = new Follow*[n_follows + 1];
     for (int i = 0; i < n_follows; ++i) {
     if (follows)
-        new_follows[i] = follows[i];
+        nfs[i] = follows[i];
     else
-        new_follows[i] = NULL;
+        nfs[i] = NULL;
 }
-    new_follows[n_follows] = f;
+    nfs[n_follows] = f;
     delete[] follows;
-    follows = new_follows;
-    new_follows=NULL;
+    follows = nfs;
+    nfs=NULL;
     ++n_follows;
 }
 void User::a_follower(Follow* f) {
-    Follow** new_followers = new Follow*[n_followers + 1];
+    Follow** nfr = new Follow*[n_followers + 1];
     for (int i = 0; i < n_followers; ++i) {
     if (followers)
-        new_followers[i] = followers[i];
+        nfr[i] = followers[i];
     else
-        new_followers[i] = NULL;
+        nfr[i] = NULL;
 }
-    new_followers[n_followers] = f;
+    nfr[n_followers] = f;
     delete[] followers;
-    followers = new_followers;
-    new_followers=NULL;
+    followers = nfr;
+    nfr=NULL;
     ++n_followers;
 }
 int User::get_followcount() const {
@@ -154,16 +154,16 @@ User* User::get_followeruser(int idx) const {
     return NULL;
 }
 void User::a_post(Post* post) {
-    Post** new_posts = new Post*[n_p + 1];
+    Post** np = new Post*[n_p + 1];
     for (int i = 0; i < n_p; ++i) {
     if (posts)
-        new_posts[i] = posts[i];
+        np[i] = posts[i];
     else
-        new_posts[i] = NULL;
+        np[i] = NULL;
 }
-    new_posts[n_p] = post;
+    np[n_p] = post;
     delete[] posts;
-    posts = new_posts;
+    posts = np;
     ++n_p;
 }
 int User::get_postcount() const {
@@ -176,11 +176,11 @@ Post* User::get_post(int idx) const {
 	return NULL;
 }
 void User::a_noti(Notification* n) {
-    Notification** new_notifs = new Notification*[n_noti + 1];
-    for (int i = 0; i < n_noti; ++i) new_notifs[i] = notifications[i];
-    new_notifs[n_noti] = n;
+    Notification** nn = new Notification*[n_noti + 1];
+    for (int i = 0; i < n_noti; ++i) nn[i] = notifications[i];
+    nn[n_noti] = n;
     delete[] notifications;
-    notifications = new_notifs;
+    notifications = nn;
     ++n_noti;
 }
 void User::print_notifications() const {
@@ -199,11 +199,11 @@ void User::print_userinfo() const {
         posts[i]->print();
     }
 }
-void User::save_users(const char* filename, User** users, int UserN) {
-    ofstream fout(filename, ios::binary|ios::trunc);
+void User::save_users(const char* f, User** users, int n_u) {
+    ofstream fout(f, ios::binary|ios::trunc);
     fout.seekp(0);
-    fout.write((char*)&UserN, sizeof(UserN));
-    for (int i = 0; i < UserN; ++i) {
+    fout.write((char*)&n_u, sizeof(n_u));
+    for (int i = 0; i < n_u; ++i) {
         String id = users[i]->getid();
         id.wif(fout);
         String pass = users[i]->getpass();
@@ -220,12 +220,12 @@ void User::save_users(const char* filename, User** users, int UserN) {
     }
     fout.close();
 }
-User** User::load_users(const char* filename, int& userN) {
-    ifstream fin(filename, ios::binary);
+User** User::load_users(const char* f, int& n_u) {
+    ifstream fin(f, ios::binary);
     fin.seekg(0);
-    fin.read((char*)&userN, sizeof(userN));
-    User** users = new User*[userN];
-    for (int i = 0; i < userN; ++i) {
+    fin.read((char*)&n_u, sizeof(n_u));
+    User** users = new User*[n_u];
+    for (int i = 0; i < n_u; ++i) {
         String id, pass, fname, lname, bio;
         id.rif(fin);
         pass.rif(fin);

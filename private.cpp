@@ -3,8 +3,7 @@
 #include "Notification.h"
 #include <iostream>
 using namespace std;
-Private::Private(const String& id, const String& fname, const String& lname, const Date& dob, const String& pass, const String& bio)
-    : User(id, fname, lname, dob, pass, bio, false) {}
+Private::Private(const String& id, const String& fname, const String& lname, const Date& dob, const String& pass, const String& bio): User(id, fname, lname, dob, pass, bio, false) {}
 void Private::follow(User* other) {
     if (other == this) return;
     this->a_request(other);

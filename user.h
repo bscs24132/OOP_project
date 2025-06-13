@@ -55,7 +55,7 @@ public:
     void a_noti(Notification* n);
     void print_notifications() const;
     void print_userinfo() const;
-    static void save_users(const char* filename, User** users, int userCount);
-    static User** load_users(const char* filename, int& userCount);
+    static void save_users(const char* f, User** users, int n_u);
+    static User** load_users(const char* f, int& n_u);
 };
 #endif

@@ -5,6 +5,7 @@
 #include "Follow.h"
 #include "Private.h"
 #include "Post.h"
+#include "Notification.h"
 #include "Reply.h"
 using namespace std;
 bool lower(char ch){
@@ -41,55 +42,55 @@ bool valid_p(const char* p) {
     }
     return lo && up && di && sy;
 }
-void savefollows(const char* filename, User** users, int userCount) {
-    ofstream fout(filename, ios::binary|ios::trunc);
+void savefollows(const char* f, User** users, int n_users) {
+    ofstream fout(f, ios::binary|ios::trunc);
     fout.seekp(0);
-    int totalFollows = 0;
-    for (int i = 0; i < userCount; ++i)
-    totalFollows+=users[i]->get_followcount();
-    fout.write((char*)&totalFollows, sizeof(totalFollows));
-    for (int i = 0; i < userCount; ++i) {
+    int tf = 0;
+    for (int i = 0; i < n_users; ++i)
+    tf+=users[i]->get_followcount();
+    fout.write((char*)&tf, sizeof(tf));
+    for (int i = 0; i < n_users; ++i) {
         for (int j = 0; j < users[i]->get_followcount(); ++j) {
-            User* followed = users[i]->get_followeduser(j);
+            User* fd = users[i]->get_followeduser(j);
             users[i]->getid().wif(fout);
-            if (followed)
-                followed->getid().wif(fout);
+            if (fd)
+                fd->getid().wif(fout);
             else
                 String("").wif(fout);
         }
     }
     fout.close();
 }
-void loadfollows(const char* filename, User** users, int userCount) {
-    ifstream fin(filename, ios::binary);
-    int totalFollows;
-    fin.read((char*)&totalFollows, sizeof(totalFollows));
-    for (int i = 0; i < totalFollows; ++i) {
-        String followerId, followedId;
-        followerId.rif(fin);
-        followedId.rif(fin);
-        User* follower = NULL;
-        User* followed = NULL;
-        for (int j = 0; j < userCount; ++j) {
-            if (users[j]->getid() == followerId) follower = users[j];
-            if (users[j]->getid() == followedId) followed = users[j];
+void loadfollows(const char* f, User** users, int n_users) {
+    ifstream fin(f, ios::binary);
+    int tf;
+    fin.read((char*)&tf, sizeof(tf));
+    for (int i = 0; i < tf; ++i) {
+        String fid, fdid;
+        fid.rif(fin);
+        fdid.rif(fin);
+        User* fr = NULL;
+        User* fd = NULL;
+        for (int j = 0; j < n_users; ++j) {
+            if (users[j]->getid() == fid) fr = users[j];
+            if (users[j]->getid() == fdid) fd = users[j];
         }
-        if (follower && followed) {
-            Follow* f = new Follow(follower, followed);
-            follower->a_followed(f);
-            followed->a_follower(f);
+        if (fr && fd) {
+            Follow* f = new Follow(fr, fd);
+            fr->a_followed(f);
+            fd->a_follower(f);
         }
     }
     fin.close();
 }
-void saveposts(const char* filename, User** users, int userCount) {
-    ofstream fout(filename, ios::binary|ios::trunc);
+void saveposts(const char* f, User** users, int n_users) {
+    ofstream fout(f, ios::binary|ios::trunc);
     fout.seekp(0);
-    int totalPosts = 0;
-    for (int i = 0; i < userCount; ++i)
-    totalPosts+=users[i]->get_postcount();
-    fout.write((char*)&totalPosts, sizeof(totalPosts));
-    for (int i = 0; i < userCount; ++i) {
+    int t_p = 0;
+    for (int i = 0; i < n_users; ++i)
+    t_p+=users[i]->get_postcount();
+    fout.write((char*)&t_p, sizeof(t_p));
+    for (int i = 0; i < n_users; ++i) {
         for (int j = 0; j < users[i]->get_postcount(); ++j) {
             Post* p = users[i]->get_post(j);
             p->wif(fout);
@@ -97,20 +98,20 @@ void saveposts(const char* filename, User** users, int userCount) {
     }
     fout.close();
 }
-void loadposts(const char* filename, User** users, int userCount) {
-    ifstream fin(filename, ios::binary);
-    int totalPosts;
-    fin.read((char*)&totalPosts, sizeof(totalPosts));
-    for (int i = 0; i < totalPosts; ++i) {
-        Post* p = Post::rif(fin, users, userCount);
+void loadposts(const char* f, User** users, int n_users) {
+    ifstream fin(f, ios::binary);
+    int t_p;
+    fin.read((char*)&t_p, sizeof(t_p));
+    for (int i = 0; i < t_p; ++i) {
+        Post* p = Post::rif(fin, users, n_users);
         if (p && p->get_user())
             p->get_user()->a_post(p);
     }
     fin.close();
 }
-void printusers(User** users, int userCount) {
+void printusers(User** users, int n_users) {
     cout << "All users:\n";
-    for (int i = 0; i < userCount; ++i) {
+    for (int i = 0; i < n_users; ++i) {
         cout << i + 1 << ". ";
         users[i]->getid().print();
         cout << " (";
@@ -125,7 +126,7 @@ User** users = User::load_users("users.bin",userc);
 loadfollows("follows.bin", users, userc);
 loadposts("posts.bin", users, userc);
 cout<<"Total number of users: "<<userc;
-    User* current = NULL;
+    User* ME = NULL;
     while (true) {
         cout << "\n***** Social Media Main Menu *****\n";
         cout << "1. Create account\n";
@@ -187,12 +188,12 @@ cout<<"Total number of users: "<<userc;
                 u = new Public(id, fname, lname, Date(y,m,d), pass, bio);
             else
           u = new Private(id, fname, lname, Date(y,m,d), pass, bio);
-            User** new_users = new User*[userc+1];
-            for (int i = 0; i < userc; ++i) new_users[i] = users[i];
-            new_users[userc] = u;
+            User** n_u = new User*[userc+1];
+            for (int i = 0; i < userc; ++i) n_u[i] = users[i];
+            n_u[userc] = u;
             delete[] users;
-            users = new_users;
-            new_users=NULL;
+            users = n_u;
+            n_u=NULL;
             userc++;
             cout << "Account created!\n";
         }
@@ -205,11 +206,11 @@ cout<<"Total number of users: "<<userc;
             char pcha[100];
             cin.getline(pcha,100);
             String pass(pcha);
-            current = NULL;
+            ME = NULL;
             for (int i = 0; i < userc; ++i)
                 if (users[i]->getid() == id && users[i]->getpass() == pass)
-                    current = users[i];
-            if (current == NULL) {
+                    ME = users[i];
+            if (ME == NULL) {
                 cout << "Login failed.\n";
             }
 			else {
@@ -238,24 +239,24 @@ cout<<"***************************************************\n";
                     cin >> op;
                     cin.ignore();
                     if (op == 1) {
-                        current->print_userinfo();
+                        ME->print_userinfo();
                     }
 					else if (op == 2) {
                         cout << "Enter post content: ";
                         char pst[200];
                         cin.getline(pst,200);
                         String msg(pst);
-                        String pid=current->getid()+String("_post")+String("1");
-                        Post* p=new Post(pid,msg,current);
-                        current->a_post(p);
+                        String pid=ME->getid()+String("_post")+String("1");
+                        Post* p=new Post(pid,msg,ME);
+                        ME->a_post(p);
                         cout << "Posted!\n";
                     }
 		else if (op == 3) {
-                int pc=current->get_postcount();
+                int pc=ME->get_postcount();
                 if(pc==0)cout<<"No posts.\n";
                         for(int i=0;i<pc;++i){
                             cout<<i+1<<". ";
-                            current->get_post(i)->print();
+                            ME->get_post(i)->print();
                         }
                     }
 		else if (op == 4) {
@@ -264,28 +265,28 @@ cout<<"***************************************************\n";
                     char fo[100];
                         cin.getline(fo,100);
                         String fid(fo);
-                        User* target = NULL;
+                        User* ou = NULL;
                         for (int i = 0; i < userc; ++i)
                             if (users[i]->getid() == fid)
-                                target = users[i];
-                    bool isFollowing = false;
-for (int i = 0; i<current->get_followcount();++i)
-    if (current->get_followeduser(i) == target)
-        isFollowing = true;
-if (!isFollowing) {
+                                ou = users[i];
+                    bool flag = false;
+for (int i = 0; i<ME->get_followcount();++i)
+    if (ME->get_followeduser(i) == ou)
+        flag = true;
+if (!flag) {
     cout << "You donot follow this user.\n";
     break;
 }
-                        if (target == NULL) {
+                        if (ou == NULL) {
                             cout << "No user with this id.\n";
                         }
 				else {
-                        int pc = target->get_postcount();
+                        int pc = ou->get_postcount();
                             if (pc == 0) cout << "No posts.\n";
                             else {
                                 for (int i = 0; i < pc; ++i) {
                                     cout << i + 1 << ". ";
-                                    target->get_post(i)->print();
+                                    ou->get_post(i)->print();
                                 }
                                 cout << "Enter post number to like: ";
                                 int pn;
@@ -293,10 +294,10 @@ if (!isFollowing) {
                                 cin.ignore();
                                 if (pn< 1||pn>pc)cout<<"Invalid.\n";
                                 else {
-                                    Post* post=target->get_post(pn-1);
-                                    post->add_like(current);
-                                    Notification* n = new Notification(current->getid() + String(" has liked your post."));
-                                    target->a_noti(n);
+                                    Post* post=ou->get_post(pn-1);
+                                    post->add_like(ME);
+                                    Notification* n = new Notification(ME->getid() + String(" has liked your post."));
+                                    ou->a_noti(n);
                                     cout << "Liked!\n";
                                 }
                             }
@@ -308,28 +309,28 @@ if (!isFollowing) {
                 char f5[100];
                 cin.getline(f5,100);
                         String fid(f5);
-                User* target = NULL;
+                User* ou = NULL;
                         for (int i = 0; i < userc; ++i)
                             if (users[i]->getid() == fid)
-                                target = users[i];
-                                bool isFollowing = false;
-for (int i = 0; i < current->get_followcount(); ++i)
-    if (current->get_followeduser(i) == target)
-        isFollowing = true;
-if (!isFollowing) {
+                                ou = users[i];
+                                bool flag = false;
+for (int i = 0; i < ME->get_followcount(); ++i)
+    if (ME->get_followeduser(i) == ou)
+        flag = true;
+if (!flag) {
     cout << "You donnot follow this user.\n";
     break;
 }
-                    if (target == NULL) {
+                    if (ou == NULL) {
                             cout << "No user with this id.\n";
                         }
 			else {
-                            int pc = target->get_postcount();
+                            int pc = ou->get_postcount();
                             if (pc == 0) cout << "No posts.\n";
                     else {
                                 for (int i = 0; i < pc; ++i) {
                                     cout << i + 1 << ". ";
-                                    target->get_post(i)->print();
+                                    ou->get_post(i)->print();
                                 }
                                 cout << "Enter post number to reply: ";
                                 int pn;
@@ -340,9 +341,9 @@ if (!isFollowing) {
                                     cout << "Enter reply: ";
                                     char rch[300];
                                     cin.getline(rch,300);
-                                    target->get_post(pn- 1)->add_reply(current, String(rch));
-                            Notification* n = new Notification(current->getid() + String(" has replied to your post."));
-                                target->a_noti(n);
+                                    ou->get_post(pn- 1)->add_reply(ME, String(rch));
+                            Notification* n = new Notification(ME->getid() + String(" has replied to your post."));
+                                ou->a_noti(n);
                             cout << "Replied!\n";
                                 }
                             }
@@ -354,22 +355,22 @@ if (!isFollowing) {
                         char f6[100];
                         cin.getline(f6,100);
        String fid(f6);
-                        User* target = NULL;
+                        User* ou = NULL;
             for (int i = 0; i < userc; ++i)
                             if (users[i]->getid() == fid)
-                                target = users[i];
-                        if (target == NULL) {
+                                ou = users[i];
+                        if (ou == NULL) {
                             cout << "No user with this id.\n";
                         }
 						else {
-                            target->follow(current);
+                            ou->follow(ME);
                         }
                     }
 				else if (op==7) {
-                        int fc = current->get_followercount();
+                        int fc = ME->get_followercount();
                         if (fc == 0) cout << "You have no followers.\n";
                         for (int i = 0; i < fc; ++i) {
-                            User* u = current->get_followeruser(i);
+                            User* u = ME->get_followeruser(i);
                             if (u) {
                                 u->getid().print();
                                 cout << endl;
@@ -377,10 +378,10 @@ if (!isFollowing) {
                         }
                     }
 		else if (op==8){
-        int fc = current->get_followcount();
+        int fc = ME->get_followcount();
                         if (fc == 0) cout << "you are not following anyone.\n";
     for (int i = 0; i < fc; ++i) {
-                            User* u = current->get_followeduser(i);
+                            User* u = ME->get_followeduser(i);
                             if (u) {
                                 u->getid().print();
                                 cout << endl;
@@ -388,7 +389,7 @@ if (!isFollowing) {
                         }
                     }
 					else if (op == 9) {
-                        current->print_notifications();
+                        ME->print_notifications();
                     }
 					else if (op == 10) {
                         printusers(users,userc);
@@ -397,24 +398,24 @@ if (!isFollowing) {
                         break;
                     }
                     else if (op == 12) {
-    if (!current->is_pub()) {
-        int rc = current->get_requestcount();
+    if (!ME->is_pub()) {
+        int rc = ME->get_requestcount();
         if (rc == 0) cout << "You have no follow requests.\n";
         for (int i = 0; i < rc; ++i) {
-            User* u = current->get_requestuser(i);
+            User* u = ME->get_requestuser(i);
             if (u) { u->getid().print(); cout << endl; }
         }
     } else {
         cout << "You have public account.\n";
     }
 } else if (op == 13) {
-    if (!current->is_pub()) {
-        int rc = current->get_requestcount();
+    if (!ME->is_pub()) {
+        int rc = ME->get_requestcount();
         if (rc == 0) cout << "You have no follow requests.\n";
         else {
             for (int i = 0; i < rc; ++i) {
                 cout << i + 1 << ". ";
-                current->get_requestuser(i)->getid().print();
+                ME->get_requestuser(i)->getid().print();
                 cout << endl;
             }
     cout << "Enter request number to accept: ";
@@ -423,14 +424,14 @@ if (!isFollowing) {
             cin.ignore();
             if(rn<1||rn> rc) cout << "Invalid.\n";
             else {
-                User* reqUser = current->get_requestuser(rn- 1);
-                Follow* f = new Follow(reqUser, current);
-                reqUser->a_followed(f);
-                current->a_follower(f);
-             Notification* n = new Notification(current->getid() + String(" accepted your follow request."));
-        reqUser->a_noti(n);
-      current->r_request(reqUser);
-                reqUser->r_sentrequest(current);
+                User* otherus = ME->get_requestuser(rn- 1);
+                Follow* f = new Follow(otherus, ME);
+                otherus->a_followed(f);
+                ME->a_follower(f);
+             Notification* n = new Notification(ME->getid() + String(" accepted your follow request."));
+        otherus->a_noti(n);
+      ME->r_request(otherus);
+                otherus->r_sentrequest(ME);
                 cout << "Accepted.\n";
             }
         }
@@ -439,13 +440,13 @@ if (!isFollowing) {
         cout << "You have public account.\n";
     }
 } else if (op == 14) {
-    if (!current->is_pub()) {
-        int rc = current->get_requestcount();
+    if (!ME->is_pub()) {
+        int rc = ME->get_requestcount();
         if (rc == 0) cout << "You have no follow requests.\n";
         else {
             for (int i = 0; i < rc; ++i) {
                 cout << i + 1 << ". ";
-                current->get_requestuser(i)->getid().print();
+                ME->get_requestuser(i)->getid().print();
                 cout << endl;
             }
             cout << "Enter request number to reject: ";
@@ -454,11 +455,11 @@ if (!isFollowing) {
             cin.ignore();
             if (rno<1||rno>rc)cout<< "Invalid.\n";
             else {
-                User* reqUser = current->get_requestuser(rno- 1);
-                Notification* n = new Notification(current->getid() + String(" rejected your follow request."));
-                reqUser->a_noti(n);
-        current->r_request(reqUser);
-                reqUser->r_sentrequest(current);
+                User* otheruser = ME->get_requestuser(rno- 1);
+                Notification* n = new Notification(ME->getid() + String(" rejected your follow request."));
+                otheruser->a_noti(n);
+        ME->r_request(otheruser);
+                otheruser->r_sentrequest(ME);
 cout << "Rejected!\n";
             }
         }
@@ -467,23 +468,23 @@ cout << "Rejected!\n";
     }
 }
 else if (op == 15) {
-    int sc=current->get_sentrequestcount();
+    int sc=ME->get_sentrequestcount();
     if (sc == 0) cout << "You have no sent follow requests.\n";
     for (int i = 0; i < sc; ++i) {
-        User* u = current->get_sentrequestuser(i);
+        User* u = ME->get_sentrequestuser(i);
         if (u) { u->getid().print(); cout << endl; }
     }
                 }
                 else if (op == 16) {
-    int fc = current->get_followcount();
+    int fc = ME->get_followcount();
     if (fc == 0) cout << "You are not following any user.\n";
     else {
         for (int i = 0; i < fc; ++i) {
-            User* followed = current->get_followeduser(i);
-            if (followed) {
-                int pc = followed->get_postcount();
+            User* otheru = ME->get_followeduser(i);
+            if (otheru) {
+                int pc = otheru->get_postcount();
                 for (int j = 0; j < pc; ++j) {
-                    followed->get_post(j)->print();
+                    otheru->get_post(j)->print();
                 }
             }
         }

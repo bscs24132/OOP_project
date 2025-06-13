@@ -7,8 +7,10 @@ using namespace std;
 Post::Post(const String& id, const String& msg, User* user)
     : id(id), msg(msg), user(user), replies(NULL), n_rep(0), likes(NULL), n_likes(0) {}
 Post::~Post() {
-    for (int i = 0; i < n_rep; ++i) delete replies[i];
-    for (int i = 0; i < n_likes; ++i) likes[i]=NULL;
+    for (int i = 0; i < n_rep; ++i)
+    delete replies[i];
+    for (int i = 0; i < n_likes; ++i)
+    likes[i]=NULL;
     delete[] replies;
     delete[] likes;
 }
@@ -26,19 +28,19 @@ void Post::print() const {
 void Post::add_like(User* u) {
     for (int i = 0; i < n_likes; ++i)
         if (likes[i] == u) return;
-    User** new_likes = new User*[n_likes + 1];
-    for (int i = 0; i < n_likes; ++i) new_likes[i] = likes[i];
-    new_likes[n_likes] = u;
+    User** nl = new User*[n_likes + 1];
+    for (int i = 0; i < n_likes; ++i) nl[i] = likes[i];
+    nl[n_likes] = u;
     delete[] likes;
-    likes = new_likes;
+    likes = nl;
     ++n_likes;
 }
 void Post::add_reply(User* user, const String& msg) {
-    Reply** new_replies = new Reply*[n_rep + 1];
-    for (int i = 0; i < n_rep; ++i) new_replies[i] = replies[i];
-    new_replies[n_rep] = new Reply(user, msg);
+    Reply** nr = new Reply*[n_rep + 1];
+    for (int i = 0; i < n_rep; ++i) nr[i] = replies[i];
+    nr[n_rep] = new Reply(user, msg);
     delete[] replies;
-    replies = new_replies;
+    replies = nr;
     ++n_rep;
 }
 int Post::get_likecount() const
@@ -53,12 +55,14 @@ return user;
 }
 User* Post::get_likeuser(int idx) const
 {
-    if (idx >= 0 && idx < n_likes) return likes[idx];
+    if (idx >= 0 && idx < n_likes)
+    return likes[idx];
     return NULL;
 }
 
 Reply* Post::get_reply(int idx) const {
-    if (idx >= 0 && idx < n_rep) return replies[idx];
+    if (idx >= 0 && idx < n_rep)
+    return replies[idx];
     return NULL;
 }
 
@@ -73,27 +77,28 @@ void Post::wif(std::ofstream& fout) const {
     for (int i = 0; i < n_likes; ++i)
         likes[i]->getid().wif(fout);
 }
-Post* Post::rif(std::ifstream& fin, User** users, int userCount) {
+Post* Post::rif(std::ifstream& fin, User** users, int uc) {
     String id, uid, msg;
     id.rif(fin);
     uid.rif(fin);
     msg.rif(fin);
     User* u = NULL;
-    for (int i = 0; i < userCount; ++i)
-        if (users[i]->getid() == uid) u = users[i];
+    for (int i = 0; i < uc; ++i)
+        if (users[i]->getid() == uid)
+        u = users[i];
     if (!u) return NULL;
     Post* p = new Post(id, msg, u);
     fin.read((char*)&p->n_rep, sizeof(p->n_rep));
     p->replies = new Reply*[p->n_rep];
     for (int i = 0; i < p->n_rep; ++i)
-        p->replies[i] = Reply::rif(fin, users, userCount);
+        p->replies[i] = Reply::rif(fin, users, uc);
     fin.read((char*)&p->n_likes, sizeof(p->n_likes));
     p->likes = new User*[p->n_likes];
     for (int i = 0; i < p->n_likes; ++i) {
    String l;
 		l.rif(fin);
         p->likes[i] = NULL;
-        for (int j = 0; j < userCount; ++j)
+        for (int j = 0; j < uc; ++j)
             if (users[j]->getid()==l)
 			p->likes[i] = users[j];
     }

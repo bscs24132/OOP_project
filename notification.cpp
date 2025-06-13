@@ -3,7 +3,10 @@
 #include <fstream>
 using namespace std;
 Notification::Notification(const String& m) : msg(m) {}
-void Notification::print() const { msg.print(); cout << endl; }
+void Notification::print() const {
+    msg.print();
+    cout << endl;
+}
 void Notification::wif(ofstream& fout) const {
     msg.wif(fout);
 }
