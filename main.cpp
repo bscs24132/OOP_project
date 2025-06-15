@@ -174,10 +174,21 @@ cout<<"Total number of users: "<<userc;
             char bch[200];
             cin.getline(bch,200);
             String bio(bch);
+            bool vd=true;
             int y, m, d;
+            do{
+            vd=true;
             cout << "Birth year: "; cin >> y;
             cout << "Birth month: "; cin >> m;
             cout << "Birth day: "; cin >> d;
+            try{
+            	Date date(y,m,d);
+			}
+			catch(Date::invalidDate e){
+				cout<<"Invalid Date!\n";
+				vd=false;
+			}
+			}while(!vd);
             cin.ignore();
             cout << "Public account? (1=Yes, 0=No): ";
             int pub;
@@ -185,9 +196,9 @@ cout<<"Total number of users: "<<userc;
             cin.ignore();
             User* u;
             if (pub == 1)
-                u = new Public(id, fname, lname, Date(y,m,d), pass, bio);
+                u = new Public(id, fname, lname,Date(y,m,d), pass, bio);
             else
-          u = new Private(id, fname, lname, Date(y,m,d), pass, bio);
+          u = new Private(id, fname, lname,Date(y,m,d), pass, bio);
             User** n_u = new User*[userc+1];
             for (int i = 0; i < userc; ++i) n_u[i] = users[i];
             n_u[userc] = u;
